@@ -1,0 +1,108 @@
+## Load packages
+
+```{r}
+library(tidyverse)
+library(sf)
+library(janitor)
+library(tmap)
+library(tmaptools)
+```
+
+## Load the data
+
+```{r}
+shape <- st_read('data/Washington_Counties_with_Natural_Shoreline___washsh_area/Washington_Counties_with_Natural_Shoreline___washsh_area.shp') %>% 
+      clean_names()
+
+report <- read_csv('data/Report_Card_Assessment_Data_2018-19_School_Year_20231012.csv',
+                   locale = locale(encoding = "latin1"),
+                   na = "NULL") %>% 
+      clean_names()
+
+```
+
+
+```{r}
+report_simp <- report %>% 
+  select(c('county', 'organization_level', 'grade_level', 'test_subject', 'district_code', 'district_name', 'percent_met_tested_only')) %>% 
+  na.omit()
+
+
+Datatypelist <- report_simp %>% 
+  summarise_all(class) %>%
+  pivot_longer(everything(), 
+               names_to="All_variables", 
+               values_to="Variable_class")
+
+Datatypelist
+```
+
+```{r}
+
+school_data <- report_simp %>% 
+  filter(str_detect(`grade_level`, "All")) %>% 
+  filter(test_subject == "Science" & county != "Multiple") %>% 
+  filter(organization_level == "School")
+
+```
+
+
+```{r}
+data_group <- school_data %>% 
+  group_by(county) %>% 
+  summarise(avg_pass_rate = mean(percent_met_tested_only))
+
+data_group 
+```
+
+```{r}
+avg_wtpass_rate <- mean(data_group$avg_pass_rate)
+
+data_compare <- data_group %>% 
+  mutate(pass_rate_compare = case_when(avg_pass_rate > avg_wtpass_rate ~ "Above the average pass rate",
+                                       TRUE ~ "Below the average pass rate")) # 1 refers to above the average rate, 0 refers to below the rate.
+
+
+```
+
+
+```{r}
+wt_datamap <- shape %>% 
+  clean_names() %>% 
+  left_join(.,
+            data_compare,
+            by = c("countylabe" = "county"))
+
+```
+
+```{r}
+tmap_mode("plot")
+qtm(wt_datamap,
+    fill = "pass_rate_compare")
+```
+
+```{r}
+tmapwt <- wt_datamap %>% 
+  st_bbox() %>% 
+  read_osm(., type = "osm", zoom = NULL)
+```
+
+```{r}
+tmap_mode("plot")
+
+tm_shape(tmapwt)+
+tm_rgb()+
+tm_shape(wt_datamap) + 
+tm_polygons("pass_rate_compare", 
+        style="jenks",
+        palette="YlOrBr",
+        midpoint=NA,
+        title="",
+        alpha = 0.3) + 
+  tm_compass(position = c("left", "bottom"),type = "arrow") + 
+  tm_scale_bar(position = c("left", "bottom")) +
+  tm_layout(title = "Average Pass Rate", legend.position = c("right", "bottom"))
+```
+
+
+
