@@ -3,6 +3,7 @@ title: "homework04"
 author: "Jiaming Li"
 date: "2023-10-28"
 output: html_document
+accessed by: "James Tan"
 ---
 
 ```{r setup, include=FALSE}
@@ -11,9 +12,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 load library
 ```{r}
-library(tidyverse)
+library(here)
 library(sf)
-
+library(tidyverse)
+library(janitor)
+library(countrycode)
+library(usethis)
+library(gitcreds)
 ```
 
 
